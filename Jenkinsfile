@@ -4,10 +4,10 @@ pipeline {
 
     environment {
         COURSE = "Jenkins"
-        APP_VERSION = ""
         ACC_ID = "160885265516"
         PROJECT = "roboshop"
         COMPONENT = "catalogue"
+        APP_VERSION = ""
     }
 
     options {
@@ -21,8 +21,8 @@ pipeline {
             steps {
                 script {
                     def packageJSON = readJSON file: 'package.json'
-                    APP_VERSION = packageJSON.version
-                    echo "App version: ${APP_VERSION}"
+                    env.APP_VERSION = packageJSON.version
+                    echo "App version: ${env.APP_VERSION}"
                 }
             }
         }
@@ -54,7 +54,7 @@ pipeline {
             }
         }
 
-        /* stage('Quality Gate') {
+       /*  stage('Quality Gate') {
             steps {
                 timeout(time: 1, unit: 'HOURS') {
                     waitForQualityGate abortPipeline: true
@@ -65,6 +65,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 sh '''
+                echo "Building Docker image ${PROJECT}-${COMPONENT}:${APP_VERSION}"
                 docker build -t ${PROJECT}-${COMPONENT}:${APP_VERSION} .
                 '''
             }
