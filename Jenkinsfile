@@ -1,91 +1,101 @@
 pipeline {
-    // These are pre-build sections
-    agent {
-        node {
-            label 'AGENT-1'
-        }
-    }
+
+    agent { label 'AGENT-1' }
+
     environment {
         COURSE = "Jenkins"
-        appVersion = ""
+        APP_VERSION = ""
         ACC_ID = "160885265516"
         PROJECT = "roboshop"
         COMPONENT = "catalogue"
     }
+
     options {
-        timeout(time: 10, unit: 'MINUTES') 
+        timeout(time: 10, unit: 'MINUTES')
         disableConcurrentBuilds()
     }
-    // This is build section
+
     stages {
+
         stage('Read Version') {
             steps {
-                script{
+                script {
                     def packageJSON = readJSON file: 'package.json'
-                    appVersion = packageJSON.version
-                    echo "app version: ${appVersion}"
+                    APP_VERSION = packageJSON.version
+                    echo "App version: ${APP_VERSION}"
                 }
             }
         }
+
         stage('Install Dependencies') {
             steps {
-                script{
-                    sh """
-                        npm install --include=dev
-                    """
-                }
+                sh '''
+                npm install --include=dev
+                '''
             }
         }
+
         stage('Unit Test') {
             steps {
-                script{
-                    sh """
-                        npm test
-                    """
-                }
+                sh '''
+                npm test
+                '''
             }
         }
-        //Here you need to select scanner tool and send the analysis to server
-        stage('Sonar Scan'){
-            environment {
-                def scannerHome = tool 'Sonar 8.0'
-            }
+
+        stage('Sonar Scan') {
             steps {
-                script{
+                script {
+                    def scannerHome = tool 'Sonar 8.0'
                     withSonarQubeEnv('sonar-server') {
-                        sh  "${scannerHome}/bin/sonar-scanner"
+                        sh "${scannerHome}/bin/sonar-scanner"
                     }
                 }
             }
         }
-    //     stage('Quality Gate') {
-    //         steps {
-    //             timeout(time: 1, unit: 'HOURS') {
-    //                 // Wait for the quality gate status
-    //                 // abortPipeline: true will fail the Jenkins job if the quality gate is 'FAILED'
-    //                 waitForQualityGate abortPipeline: true 
-    //             }
-    //         }
-    //     }
-    
 
-     }
+        /* stage('Quality Gate') {
+            steps {
+                timeout(time: 1, unit: 'HOURS') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        } */
 
-        
+        stage('Build Docker Image') {
+            steps {
+                sh '''
+                docker build -t ${PROJECT}-${COMPONENT}:${APP_VERSION} .
+                '''
+            }
+        }
 
-    post{
-        always{
-            echo 'I will always say Hello again!'
+        stage('Trivy Image Scan') {
+            steps {
+                sh '''
+                trivy image --severity HIGH,CRITICAL ${PROJECT}-${COMPONENT}:${APP_VERSION}
+                '''
+            }
+        }
+
+    }
+
+    post {
+        always {
+            echo 'Cleaning workspace'
             cleanWs()
         }
+
         success {
-            echo 'I will run if success'
+            echo 'Pipeline completed successfully'
         }
+
         failure {
-            echo 'I will run if failure'
+            echo 'Pipeline failed'
         }
+
         aborted {
-            echo 'pipeline is aborted'
+            echo 'Pipeline aborted'
         }
     }
 }
