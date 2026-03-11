@@ -7,7 +7,7 @@ pipeline {
         ACC_ID = "160885265516"
         PROJECT = "roboshop"
         COMPONENT = "catalogue"
-        APP_VERSION = ""
+        APP_VERSION = "latest"
     }
 
     options {
@@ -21,7 +21,7 @@ pipeline {
             steps {
                 script {
                     def packageJSON = readJSON file: 'package.json'
-                    env.APP_VERSION = packageJSON.version
+                    env.APP_VERSION = packageJSON.version ?: "latest"
                     echo "App version: ${env.APP_VERSION}"
                 }
             }
@@ -54,18 +54,21 @@ pipeline {
             }
         }
 
-       /*  stage('Quality Gate') {
-            steps {
-                timeout(time: 1, unit: 'HOURS') {
-                    waitForQualityGate abortPipeline: true
-                }
-            }
-        } */
+        // stage('Quality Gate') {
+        //     steps {
+        //         timeout(time: 1, unit: 'HOURS') {
+        //             waitForQualityGate abortPipeline: true
+        //         }
+        //     }
+        // }
 
         stage('Build Docker Image') {
             steps {
                 sh '''
-                echo "Building Docker image ${PROJECT}-${COMPONENT}:${APP_VERSION}"
+                echo "PROJECT=${PROJECT}"
+                echo "COMPONENT=${COMPONENT}"
+                echo "APP_VERSION=${APP_VERSION}"
+
                 docker build -t ${PROJECT}-${COMPONENT}:${APP_VERSION} .
                 '''
             }
@@ -82,6 +85,7 @@ pipeline {
     }
 
     post {
+
         always {
             echo 'Cleaning workspace'
             cleanWs()
@@ -98,5 +102,6 @@ pipeline {
         aborted {
             echo 'Pipeline aborted'
         }
+
     }
 }
