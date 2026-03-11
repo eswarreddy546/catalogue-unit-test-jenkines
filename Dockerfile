@@ -4,6 +4,7 @@ COPY package.json .
 COPY *.js .
 # this may add extra cache memory
 RUN npm install 
+RUN apt-get update && apt-get upgrade -y
 
 
 FROM node:20.19.5-alpine3.21
